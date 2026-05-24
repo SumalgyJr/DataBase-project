@@ -1,0 +1,218 @@
+DROP TABLE IF EXISTS technician_expertise;
+DROP TABLE IF EXISTS testing_event;
+DROP TABLE IF EXISTS hangar_assignment;
+DROP TABLE IF EXISTS technician;
+DROP TABLE IF EXISTS traffic_controller;
+DROP TABLE IF EXISTS employee_union;
+DROP TABLE IF EXISTS airport_employee;
+DROP TABLE IF EXISTS union_;
+DROP TABLE IF EXISTS airplane;
+DROP TABLE IF EXISTS hangar;
+DROP TABLE IF EXISTS test;
+DROP TABLE IF EXISTS plane_model;
+
+CREATE TABLE union_ (
+    union_id INTEGER PRIMARY KEY,
+    union_name VARCHAR(100) NOT NULL UNIQUE,
+    contact_info VARCHAR(200),
+    established_date DATE,
+    monthly_fee NUMERIC(8,2) DEFAULT 0
+);
+
+CREATE TABLE airport_employee (
+    ssn VARCHAR(11) PRIMARY KEY,
+    full_name VARCHAR(120) NOT NULL,
+    address VARCHAR(250),
+    phone VARCHAR(20),
+    hire_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    birth_date DATE,
+    gender CHAR(1),
+    email VARCHAR(100) UNIQUE
+);
+
+CREATE TABLE employee_union (
+    ssn VARCHAR(11) NOT NULL,
+    union_id INTEGER NOT NULL,
+    membership_number VARCHAR(50) NOT NULL UNIQUE,
+    join_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    is_active BOOLEAN DEFAULT 1,
+    PRIMARY KEY (ssn, union_id),
+    FOREIGN KEY (ssn) REFERENCES airport_employee(ssn) ON UPDATE CASCADE ON DELETE CASCADE,
+    FOREIGN KEY (union_id) REFERENCES union_(union_id) ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+CREATE TABLE technician (
+    ssn VARCHAR(11) PRIMARY KEY,
+    specialization VARCHAR(100),
+    years_of_experience INTEGER DEFAULT 0,
+    certification_level VARCHAR(20),
+    hourly_rate NUMERIC(10,2) DEFAULT 0,
+    FOREIGN KEY (ssn) REFERENCES airport_employee(ssn) ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+CREATE TABLE traffic_controller (
+    ssn VARCHAR(11) PRIMARY KEY,
+    last_medical_exam_date DATE NOT NULL,
+    tower_assignment VARCHAR(50),
+    certification_number VARCHAR(50) UNIQUE,
+    shift_schedule VARCHAR(50),
+    FOREIGN KEY (ssn) REFERENCES airport_employee(ssn) ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+CREATE TABLE plane_model (
+    model_no VARCHAR(30) PRIMARY KEY,
+    manufacturer VARCHAR(60) NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    typical_capacity INTEGER,
+    max_range_km INTEGER,
+    cruise_speed_kmh INTEGER
+);
+
+CREATE TABLE technician_expertise (
+    technician_ssn VARCHAR(11) NOT NULL,
+    model_no VARCHAR(30) NOT NULL,
+    expertise_level VARCHAR(20) DEFAULT 'Certified',
+    certification_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    PRIMARY KEY (technician_ssn, model_no),
+    FOREIGN KEY (technician_ssn) REFERENCES technician(ssn) ON UPDATE CASCADE ON DELETE CASCADE,
+    FOREIGN KEY (model_no) REFERENCES plane_model(model_no) ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+CREATE TABLE hangar (
+    hangar_no VARCHAR(20) PRIMARY KEY,
+    location VARCHAR(100) NOT NULL,
+    capacity INTEGER NOT NULL,
+    has_fire_suppression BOOLEAN DEFAULT 0,
+    has_lighting BOOLEAN DEFAULT 1
+);
+
+CREATE TABLE airplane (
+    plane_no VARCHAR(20) PRIMARY KEY,
+    model_no VARCHAR(30) NOT NULL,
+    current_hangar_no VARCHAR(20),
+    status VARCHAR(20) DEFAULT 'Active',
+    acquisition_date DATE NOT NULL,
+    last_maintenance_date DATE,
+    total_flight_hours INTEGER DEFAULT 0,
+    FOREIGN KEY (model_no) REFERENCES plane_model(model_no) ON UPDATE CASCADE ON DELETE RESTRICT,
+    FOREIGN KEY (current_hangar_no) REFERENCES hangar(hangar_no) ON UPDATE CASCADE ON DELETE SET NULL
+);
+
+CREATE TABLE hangar_assignment (
+    assignment_id INTEGER PRIMARY KEY,
+    plane_no VARCHAR(20) NOT NULL,
+    hangar_no VARCHAR(20) NOT NULL,
+    in_date DATE NOT NULL,
+    in_time TIME NOT NULL,
+    out_date DATE,
+    out_time TIME,
+    reason VARCHAR(100),
+    FOREIGN KEY (plane_no) REFERENCES airplane(plane_no) ON UPDATE CASCADE ON DELETE CASCADE,
+    FOREIGN KEY (hangar_no) REFERENCES hangar(hangar_no) ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+CREATE TABLE test (
+    test_id INTEGER PRIMARY KEY,
+    test_name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    duration_hours NUMERIC(5,2) NOT NULL,
+    frequency_days INTEGER,
+    passing_score INTEGER DEFAULT 70
+);
+
+CREATE TABLE testing_event (
+    event_id INTEGER PRIMARY KEY,
+    plane_no VARCHAR(20) NOT NULL,
+    technician_ssn VARCHAR(11) NOT NULL,
+    test_id INTEGER NOT NULL,
+    test_date DATE NOT NULL,
+    test_time TIME NOT NULL,
+    hours_spent NUMERIC(5,2) NOT NULL,
+    score INTEGER NOT NULL,
+    remarks TEXT,
+    FOREIGN KEY (plane_no) REFERENCES airplane(plane_no) ON UPDATE CASCADE ON DELETE RESTRICT,
+    FOREIGN KEY (technician_ssn) REFERENCES technician(ssn) ON UPDATE CASCADE ON DELETE RESTRICT,
+    FOREIGN KEY (test_id) REFERENCES test(test_id) ON UPDATE CASCADE ON DELETE RESTRICT,
+    UNIQUE(plane_no, test_id, test_date)
+);
+
+INSERT INTO union_ (union_name, contact_info, established_date, monthly_fee) VALUES
+('Airport Workers Union TRNC', 'contact@awu.trnc', '1985-03-15', 50.00),
+('Aviation Technicians Guild', 'info@atg.trnc', '1990-07-22', 75.00),
+('Air Traffic Controllers Association', 'atca@ercan.trnc', '1978-11-10', 60.00);
+
+INSERT INTO plane_model (model_no, manufacturer, type, typical_capacity, max_range_km, cruise_speed_kmh) VALUES
+('B737-800', 'Boeing', 'Narrow-body', 189, 5400, 842),
+('A320-200', 'Airbus', 'Narrow-body', 180, 6150, 828),
+('B777-300ER', 'Boeing', 'Wide-body', 354, 13650, 905),
+('B787-9', 'Boeing', 'Wide-body', 290, 14140, 903);
+
+INSERT INTO airport_employee (ssn, full_name, address, phone, hire_date, birth_date, gender, email) VALUES
+('12345678901', 'Hakan Şükür', 'Lefkosa, TRNC', '+90-533-111-2233', '2010-06-15', '1971-09-01', 'M', 'hakan.sukur@ercan.trnc'),
+('23456789012', 'Arda Turan', 'Girne, TRNC', '+90-542-222-3344', '2012-09-20', '1987-01-30', 'M', 'arda.turan@ercan.trnc'),
+('34567890123', 'Burak Yılmaz', 'Guzelyurt, TRNC', '+90-533-333-4455', '2015-03-10', '1985-07-15', 'M', 'burak.yilmaz@ercan.trnc'),
+('56789012345', 'Tuncay Şanlı', 'Girne, TRNC', '+90-533-555-6677', '2008-11-01', '1982-01-16', 'M', 'tuncay.sanli@ercan.trnc'),
+('67890123456', 'Fatih Terim', 'Lefkosa, TRNC', '+90-542-666-7788', '2020-06-20', '1953-09-04', 'M', 'fatih.terim@ercan.trnc'),
+('78901234567', 'Rüştü Reçber', 'Magusa, TRNC', '+90-533-777-8899', '2005-09-25', '1973-05-10', 'M', 'rustu.recber@ercan.trnc'),
+('89012345678', 'Hamit Altıntop', 'Lefkosa, TRNC', '+90-548-888-9900', '2019-03-18', '1982-12-08', 'M', 'hamit.altintop@ercan.trnc'),
+('01234567890', 'Gökhan Gönül', 'Lefkosa, TRNC', '+90-542-111-2233', '2016-12-05', '1985-01-04', 'M', 'gokhan.gonul@ercan.trnc');
+
+INSERT INTO technician (ssn, specialization, years_of_experience, certification_level, hourly_rate) VALUES
+('12345678901', 'Engine Specialist', 14, 'Master', 85.00),
+('23456789012', 'Avionics Engineer', 12, 'Senior', 70.00),
+('34567890123', 'Airframe Specialist', 9, 'Senior', 65.00),
+('56789012345', 'Maintenance Engineer', 16, 'Master', 90.00);
+
+INSERT INTO traffic_controller (ssn, last_medical_exam_date, tower_assignment, certification_number, shift_schedule) VALUES
+('67890123456', '2025-06-15', 'Main Tower', 'ATC-TRNC-001', 'Morning Shift'),
+('78901234567', '2025-05-20', 'Main Tower', 'ATC-TRNC-002', 'Night Shift'),
+('89012345678', '2025-04-10', 'Approach Control', 'ATC-TRNC-003', 'Evening Shift');
+
+INSERT INTO employee_union (ssn, union_id, membership_number, join_date, is_active) VALUES
+('12345678901', 2, 'ATG-1001', '2010-07-01', 1),
+('23456789012', 2, 'ATG-1002', '2012-10-05', 1),
+('34567890123', 2, 'ATG-1003', '2015-04-20', 1),
+('56789012345', 2, 'ATG-1005', '2008-12-15', 1),
+('67890123456', 3, 'ATCA-2001', '2020-07-15', 1),
+('78901234567', 3, 'ATCA-2002', '2005-10-01', 1),
+('89012345678', 3, 'ATCA-2003', '2019-04-01', 1);
+
+INSERT INTO technician_expertise (technician_ssn, model_no, expertise_level, certification_date) VALUES
+('12345678901', 'B737-800', 'Master', '2012-06-20'),
+('12345678901', 'B787-9', 'Expert', '2016-08-15'),
+('23456789012', 'A320-200', 'Expert', '2014-09-10'),
+('34567890123', 'B737-800', 'Expert', '2016-03-15'),
+('34567890123', 'B777-300ER', 'Certified', '2018-07-22'),
+('56789012345', 'B777-300ER', 'Master', '2010-12-01'),
+('56789012345', 'B787-9', 'Expert', '2015-04-18');
+
+INSERT INTO hangar (hangar_no, location, capacity, has_fire_suppression, has_lighting) VALUES
+('H-01', 'North Section - Terminal A - Ercan Airport', 8, 1, 1),
+('H-02', 'South Section - Maintenance Area - Ercan Airport', 12, 1, 1),
+('H-03', 'East Section - Cargo Area - Ercan Airport', 6, 0, 1);
+
+INSERT INTO airplane (plane_no, model_no, current_hangar_no, status, acquisition_date, last_maintenance_date, total_flight_hours) VALUES
+('TC-ABC', 'B737-800', 'H-01', 'Active', '2018-03-10', '2025-11-15', 8500),
+('TC-DEF', 'A320-200', 'H-02', 'Active', '2019-06-20', '2025-11-20', 6200),
+('TC-GHI', 'B777-300ER', 'H-03', 'In Maintenance', '2016-09-15', '2025-10-25', 18500),
+('TC-JKL', 'B787-9', 'H-01', 'Active', '2021-04-05', '2025-11-05', 3100);
+
+INSERT INTO hangar_assignment (plane_no, hangar_no, in_date, in_time, out_date, out_time, reason) VALUES
+('TC-ABC', 'H-01', '2024-01-10', '08:00:00', '2024-06-15', '14:30:00', 'Regular Parking'),
+('TC-ABC', 'H-01', '2024-06-15', '15:00:00', NULL, NULL, 'Return to Service'),
+('TC-DEF', 'H-02', '2024-03-01', '09:00:00', NULL, NULL, 'Regular Parking'),
+('TC-GHI', 'H-03', '2024-02-15', '07:00:00', NULL, NULL, 'Major Overhaul'),
+('TC-JKL', 'H-01', '2024-05-01', '11:00:00', NULL, NULL, 'Regular Parking');
+
+INSERT INTO test (test_id, test_name, description, duration_hours, frequency_days, passing_score) VALUES
+(1, 'Engine Performance Test', 'Comprehensive engine thrust and efficiency test', 4.5, 180, 85),
+(2, 'Avionics Systems Check', 'Testing navigation and communication systems', 3.0, 90, 90),
+(3, 'Emergency Systems Test', 'Testing all emergency equipment', 2.0, 180, 95),
+(4, 'Landing Gear Operation', 'Full cycle landing gear deployment test', 2.5, 120, 85);
+
+INSERT INTO testing_event (plane_no, technician_ssn, test_id, test_date, test_time, hours_spent, score, remarks) VALUES
+('TC-ABC', '12345678901', 1, '2025-11-15', '09:00:00', 4.0, 92, 'Excellent performance'),
+('TC-ABC', '23456789012', 2, '2025-11-10', '13:30:00', 2.5, 88, 'Minor calibration error'),
+('TC-DEF', '34567890123', 4, '2025-11-08', '14:00:00', 2.0, 90, 'Smooth operation'),
+('TC-GHI', '56789012345', 1, '2025-10-25', '08:30:00', 4.5, 65, 'Engine needs maintenance'),
+('TC-GHI', '56789012345', 3, '2025-10-26', '11:00:00', 2.0, 82, 'Emergency system failure');
